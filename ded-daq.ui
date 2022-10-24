@@ -27,6 +27,18 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="leftMargin">
+     <number>20</number>
+    </property>
+    <property name="topMargin">
+     <number>20</number>
+    </property>
+    <property name="rightMargin">
+     <number>20</number>
+    </property>
+    <property name="bottomMargin">
+     <number>20</number>
+    </property>
     <item>
      <layout class="QVBoxLayout" name="VLMainContainer">
       <item>
@@ -133,7 +145,7 @@
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>50</width>
+                    <width>75</width>
                     <height>16777215</height>
                    </size>
                   </property>
@@ -223,7 +235,7 @@
          </layout>
         </item>
         <item>
-         <widget class="ImageView" name="IVMonoCamera1">
+         <widget class="GraphicsView" name="GVMonoCamera1">
           <property name="maximumSize">
            <size>
             <width>364</width>
@@ -338,7 +350,7 @@
                   </property>
                   <property name="maximumSize">
                    <size>
-                    <width>50</width>
+                    <width>75</width>
                     <height>16777215</height>
                    </size>
                   </property>
@@ -428,7 +440,7 @@
          </layout>
         </item>
         <item>
-         <widget class="ImageView" name="IVMonoCamera1_2">
+         <widget class="GraphicsView" name="GVMonoCamera1_2">
           <property name="maximumSize">
            <size>
             <width>364</width>
@@ -634,7 +646,7 @@
          </layout>
         </item>
         <item>
-         <widget class="ImageView" name="IVMonoCamera1_3">
+         <widget class="GraphicsView" name="GVIRCamera">
           <property name="maximumSize">
            <size>
             <width>364</width>
@@ -897,7 +909,7 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ImageView</class>
+   <class>GraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>pyqtgraph</header>
   </customwidget>

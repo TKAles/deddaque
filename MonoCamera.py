@@ -12,6 +12,7 @@ class MonoCamera():
         self.worker_sleep = 0.05
         self.frame_timestamp = 0
         self.old_timestamp = 0
+        self.exposure_time = -1.0
         self.vimba_alloc_mode = AllocationMode.AnnounceFrame
         return
 
@@ -21,6 +22,8 @@ class MonoCamera():
             if len(cams) == 1:
                 print('id: {0} found'.format(cams[0].get_id()))
                 self.camera_id = cams[0].get_id()
+            else:
+                print('error, {0}'.format(cams.__len__()))
     
     def start_camera(self):
         with Vimba.get_instance() as vi:
@@ -31,6 +34,14 @@ class MonoCamera():
                     time.sleep(self.worker_sleep)
                 cam.stop_streaming()
         
+    def get_exposure(self):
+        with Vimba.get_instance() as vi:
+            with vi.get_camera_by_id(self.camera_id) as cam:
+                float_feature = cam.get_feature_by_name('ExposureTime')
+                self.exposure_time = float_feature.get()
+                
+                print(self.exposure_time)
+
     def frame_worker(self, monocam: Camera, frame: Frame):
         self.current_frame = frame.as_numpy_ndarray()
         self.old_timestamp = self.frame_timestamp
