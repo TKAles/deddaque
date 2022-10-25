@@ -6,6 +6,7 @@ class MonoCamera():
         self.camera_id = '0'
         self.frame_rate = 100
         self.is_connected = False
+        self.is_streaming = False
         self.camera_context = 0
         self.current_frame = 0
         self.frame_num = 0 
@@ -28,17 +29,24 @@ class MonoCamera():
     def start_camera(self):
         with Vimba.get_instance() as vi:
             with vi.get_camera_by_id(self.camera_id) as cam:
+                self.frame_num = 0
                 cam.start_streaming(self.frame_worker, 10, self.vimba_alloc_mode)
                 self.is_connected = True
-                while self.is_connected:
-                    time.sleep(self.worker_sleep)
-                cam.stop_streaming()
+                self.is_streaming = True
+                print('Done!')
         
+    def stop_camera(self):
+        with Vimba.get_instance() as vi:
+            with vi.get_camera_by_id(self.camera_id) as cam:
+                cam.stop_streaming()
+                self.is_streaming = False
+                
     def get_exposure(self):
         with Vimba.get_instance() as vi:
             with vi.get_camera_by_id(self.camera_id) as cam:
                 float_feature = cam.get_feature_by_name('ExposureTime')
                 self.exposure_time = float_feature.get()
+
                 
                 print(self.exposure_time)
 
