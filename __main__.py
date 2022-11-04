@@ -1,149 +1,111 @@
-from enum import auto
-from functools import partial
-import os
+'''
+    __main__: Main thread for the data acquisition software.
+'''
+
+from PyQt5 import QtWidgets, QtCore, QtGui, uic
 import sys
-import time
-import ctypes as ct
-from turtle import update
-from PyQt5 import QtWidgets, uic, QtCore
-import libirimager
+import os
+
+from MonoCamera import MonoCamera
+from distutils.dep_util import newer
+from PyQt5 import uic
 import pyqtgraph as pg
-from vimba import *
-ui_path = './deddaq.ui'
 
 class Ui(QtWidgets.QMainWindow):
 
+    ui_path = 'ded-2.ui'
+    py_file = 'ded-2.py'
+
     def __init__(self):
         super(Ui, self).__init__()
-        uic.loadUi(ui_path, self)
-        self.ir_camera_object = libirimager.ThermalCamera()
-        self.ir_running = False
-        self.mono_running = False
-        self.mono_frame = ''
-        self.le_irimager_usb_sn.setText('21114001')
-        self.b_toggle_usb_conn.clicked.connect(self.connect_ir)
-        self.b_mono_toggle.clicked.connect(self.autoconnect_mono)
-        self.update_timer = QtCore.QTimer()
-        self.update_timer.timeout.connect(self.ir_worker)
-        self.update_timer.timeout.connect(self.mono_worker)
-        self.update_timer.start()
-        self.cbox_hw_temp_range.currentIndexChanged.connect(self.temperature_combobox_changed)
-        self.populate_combobox()
-        self.blank_metadata()
-        self.gfx_thermal.hideAxis('bottom')
-        self.gfx_thermal.hideAxis('left')
-        self.gfx_monoc.hideAxis('bottom')
-        self.gfx_monoc.hideAxis('left')
+        uic.loadUi(self.ui_path, self)
+        self.image_worker_timer = QtCore.QTimer()
+        self.image_worker_timer.timeout.connect(self.mcam1_graphics_worker)
+        self.TBDiagnosticLog.setReadOnly(True)
+        self.diagnostic_log = QtGui.QTextDocument()
+
+        self.PBMono1Detect.clicked.connect(self.connect_mcam_1)
+        self.PBMono1Enable.clicked.connect(self.enable_mcam_1)
+        self.diagnostic_log.setPlainText('Startup Completed.\n')
+        self.TBDiagnosticLog.setDocument(self.diagnostic_log)
+        
+        self.monocams = MonoCamera()
         self.show()
-
-    def autoconnect_mono(self):
-        if self.mono_running == False:
-            self.b_mono_toggle.setChecked(True)
-            self.b_mono_toggle.setText('Connected')
-            self.mono_running = True
-
-        elif self.mono_running == True:
-            self.b_mono_toggle.setChecked(False)
-            self.b_mono_toggle.setText('Autodetect')
-            self.mono_running = False
-
-        
-    def connect_ir(self):
-        if self.ir_running == False:
-            self.b_toggle_usb_conn.setText('Disconnect')
-            self.ir_instance = libirimager.ThermalCamera()
-            self.ir_instance.initialize()
-            time.sleep(0.5)
-            f_thermal, f_metadata = self.ir_instance.get_image()
-            self.imgItem = pg.ImageItem(f_thermal)
-            self.gfx_thermal.addItem(self.imgItem)
-            self.gfx_thermal.hideAxis('bottom')
-            self.gfx_thermal.hideAxis('left')
-            self.ir_running = True
-            #self.update_timer.start()
-            return
-        else:
-            self.b_toggle_usb_conn.setText('Connect via USB')
-            self.ir_instance.disconnect()
-            #self.update_timer.stop()
-            self.imgItem.clear()
-            self.ir_running = False
-            return
-
-    def blank_metadata(self):
-        self.l_counter.setText('--')
-        self.l_counterHW.setText('--')
-        self.l_flagstate.setText('--')
-        self.l_tempbox.setText('--')
-        self.l_tempflag.setText('--')
-        self.l_timestamp.setText('--')
         return
 
-    def ir_worker(self):
-        if self.ir_running == True:
-            self.thermal_data, self.meta_data = self.ir_instance.get_image()
-            self.imgItem.setImage(self.thermal_data)
-            self.l_counter.setText('{0}'.format(self.meta_data.counter))
-            self.l_counterHW.setText('{0}'.format(self.meta_data.counterHW))
-            match self.meta_data.flagState:
-                case 0:
-                    self.l_flagstate.setText('Open')
-                case 1:
-                    self.l_flagstate.setText('Closed')
-                case _:
-                    self.l_flagstate.setText('{0}'.format(self.meta_data.flagState))
-
-            self.l_tempbox.setText('{0:0.1f}C'.format(self.meta_data.tempBox))
-            self.l_tempflag.setText('{0:0.1f}C'.format(self.meta_data.tempFlag))
-            self.l_timestamp.setText('{0:0.3f}s'.format(self.meta_data.timestamp / 10000000.0))
+    def connect_mcam_1(self):
+        self.append_log('MONO1: Searching USB...')
+        self.monocams.detect_devices()
+        self.append_log('MONO1: Found device ID: {0}\tModel:{1}'.format(
+            self.monocams.camera_id, self.monocams.camera_model
+        ))
+        self.append_log('MONO1: Exposure: {0}us\tGain: {1}dB'.format(
+            self.monocams.exposure_value, self.monocams.amplifier_value
+        ))
+        self.PBMono1Enable.setEnabled(True)
+        self.LEMono1ExposureTime.setText('{0:.1f}'.format(self.monocams.exposure_value))
+        self.LEMono1AmplifierGain.setText('{0:.1f}'.format(self.monocams.amplifier_value))
+        self.PBMono1Detect.setText('Redetect')
+        self.PBMono1Enable.setText('Stream {0}'.format(self.monocams.camera_id))
+        self.append_log('MONO1: Creating ViewBox and ImageItem for display.')
+        self.mcam1_viewbox = pg.ViewBox()
+        self.mcam1_imageitem = pg.ImageItem()
+        self.GVMono1Preview.setCentralItem(self.mcam1_viewbox)
+        self.mcam1_viewbox.addItem(self.mcam1_imageitem)
         return
 
-    def populate_combobox(self):
-        self.cbox_hw_temp_range.addItem('-20 to 100')
-        self.cbox_hw_temp_range.addItem('0 to 250')
-        self.cbox_hw_temp_range.addItem('150 to 900')
-        self.cbox_hw_temp_range.setCurrentIndex(0)
-        return
-
-    def temperature_combobox_changed(self):
-        current_index = self.cbox_hw_temp_range.currentIndex()
-        match current_index:
-            case 0:
-                t_min = -20
-                t_max = 100
-            case 1:
-                t_min = 0
-                t_max = 250
-            case 2:
-                t_min = 150
-                t_max = 900
-        
-        if self.ir_running == True:
-            ret = self.ir_instance.IRLib.evo_irimager_set_temperature_range(
-                                            ct.c_uint(t_min), ct.c_uint(t_max))
-            if ret != 0:
-                print('Temperature change request failed.')
-            elif ret == 0:
-                print('Hardware temperature limits changed to {0} to {1} degC'.format(t_min, t_max))
-
-    def mono_worker(self):
-        with Vimba.get_instance() as vimba:
-            cams = vimba.get_all_cameras()
-            while self.mono_running == True:
-                with cams[0] as cam:
-                    cam.ExposureAuto.set('Once')
-                    mono_frame = cam.get_frame()
-                    self.mono_frame = mono_frame.as_numpy_ndarray()
-                    self.MonoImgItem = pg.ImageItem(self.mono_frame)
-                    self.MonoImgItem.setImage(self.mono_frame, autoLevels=True)
-                    self.gfx_monoc.addItem(self.MonoImgItem)
-    
+    def enable_mcam_1(self):
+        self.GVMono1Preview.setEnabled(True)
+        self.monocams.toggle_stream()
+        if self.monocams.is_streaming:
+            self.PBMono1Enable.setText('Stop {0}'.format(self.monocams.camera_id))
+            self.append_log('MONO1: Camera has entered stream mode')
+            self.append_log('MONO1: Enabling extra ui')
+            self.LEMono1ExposureTime.setEnabled(True)
+            self.LEMono1AmplifierGain.setEnabled(True)
+            self.PBMono1SetExposure.setEnabled(True)
+            self.PBMono1SetAmplifierGain.setEnabled(True)
+            self.PBMono1AutoExposure.setEnabled(True)
+            self.image_worker_timer.start(15)
             
-                
+        elif not self.monocams.is_streaming:
+            self.PBMono1Enable.setText('Stream {0}'.format(self.monocams.camera_id))
+            self.append_log('MONO1: Camera has left stream mode')
+            self.append_log('MONO1: Disabling extra UI controls')
+            self.LEMono1ExposureTime.setEnabled(False)
+            self.LEMono1AmplifierGain.setEnabled(False)
+            self.PBMono1SetExposure.setEnabled(False)
+            self.PBMono1SetAmplifierGain.setEnabled(False)
+            self.PBMono1AutoExposure.setEnabled(False)
+            self.image_worker_timer.stop()
 
+
+    def trigger_mcam_1_aelock(self):
+        if self.monocams.is_streaming:
+            self.monocams.feature_data['name'] = 'AutoExposure'
+            self.monocams.feature_data['set'] = True
+            self.monocams.feature_data['value'] = 'Once'
+            self.feature_request = True
+
+
+    def mcam1_graphics_worker(self):
+        self.mcam1_imageitem = pg.ImageItem(self.monocams.current_frame)
+        self.mcam1_viewbox.clear()
+        self.mcam1_viewbox.addItem(self.mcam1_imageitem)
+        return
+        
+    def append_log(self, string_to_append):
+        cursor = QtGui.QTextCursor(self.diagnostic_log)
+        cursor.movePosition(11)     ## 11 is enum value for selecting end of document
+        cursor.insertText(string_to_append + '\n')
+
+        self.TBDiagnosticLog.verticalScrollBar().setValue(
+            self.TBDiagnosticLog.verticalScrollBar().maximum()
+            )
+        
+        return
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     window = Ui()
     app.exec_()
-    
