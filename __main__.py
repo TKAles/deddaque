@@ -23,7 +23,7 @@ class Ui(QtWidgets.QMainWindow):
         self.diagnostic_log = QtGui.QTextDocument()
 
         self.PBMono1Detect.clicked.connect(self.connect_mcam_1)
-        self.PBMono1Enable.clicked.connect(self.enable_mono_1_stream)
+        self.PBMono1Enable.clicked.connect(self.enable_mcam_1)
         self.diagnostic_log.setPlainText('Startup Completed.\n')
         self.TBDiagnosticLog.setDocument(self.diagnostic_log)
         
@@ -44,15 +44,32 @@ class Ui(QtWidgets.QMainWindow):
         self.LEMono1ExposureTime.setText('{0:.1f}'.format(self.monocams.exposure_value))
         
         self.LEMono1AmplifierGain.setText('{0:.1f}'.format(self.monocams.amplifier_value))
-        self.PBMono1SetAmplifierGain.setEnabled(True)
+        
         self.PBMono1Detect.setText('Redetect')
         self.PBMono1Enable.setText('Stream {0}'.format(self.monocams.camera_id))
-        
         return
 
-    def enable_mono_1_stream(self):
+    def enable_mcam_1(self):
         self.GVMono1Preview.setEnabled(True)
-
+        self.monocams.toggle_stream()
+        if self.monocams.is_streaming:
+            self.PBMono1Enable.setText('Stop {0}'.format(self.monocams.camera_id))
+            self.append_log('MONO1: Camera has entered stream mode')
+            self.append_log('MONO1: Enabling extra ui')
+            self.LEMono1ExposureTime.setEnabled(True)
+            self.LEMono1AmplifierGain.setEnabled(True)
+            self.PBMono1SetExposure.setEnabled(True)
+            self.PBMono1SetAmplifierGain.setEnabled(True)
+            self.PBMono1AutoExposure.setEnabled(True)
+            
+        elif not self.monocams.is_streaming:
+            self.PBMono1Enable.setText('Stream {0}'.format(self.monocams.camera_id))
+            self.append_log('MONO1: Camera has left stream mode')
+            self.LEMono1ExposureTime.setEnabled(False)
+            self.LEMono1AmplifierGain.setEnabled(False)
+            self.PBMono1SetExposure.setEnabled(False)
+            self.PBMono1SetAmplifierGain.setEnabled(False)
+            self.PBMono1AutoExposure.setEnabled(False)
 
 
     def append_log(self, string_to_append):
