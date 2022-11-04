@@ -12,7 +12,10 @@ class MonoCamera():
         self.amplifier_value = -1
         self.camera_model = ''
         self.current_frame = np.zeros((5,5))
-        self.current_timestamp = ''
+        self.current_timestamp = 0
+        self.previous_timestamp = 0
+        self.timestamp_delta = 0
+        self.fps_value = 0
         self.is_streaming = False
         self.feature_request = False
         self.feature_data = {'name': '', 'set': False, 'value': ''}
@@ -53,9 +56,17 @@ class MonoCamera():
 
     def stream_callback(self, mcam: Camera, mframe: Frame):
         if self.feature_request:
+            self.feature_request = False
+            if self.feature_data['set']:
+                mcam.get_feature_by_name(self.feature_data['name']).set(self.feature_data['value'])
+                print('set one-shot autoexposure')
+            elif not self.feature_data['set']:
+                self.feature_data['value'] = mcam.get_feature_by_name(self.feature_data['name'])
             pass
 
+        self.previous_timestamp = copy(self.current_timestamp)
         self.current_frame = copy(mframe.as_numpy_ndarray())
         self.current_timestamp = copy(mframe.get_timestamp())
-
+        self.timestamp_delta = (self.current_timestamp - self.previous_timestamp) / (10**6)
+        self.fps_value = 1000.0 / self.timestamp_delta
         mcam.queue_frame(mframe)

@@ -28,6 +28,7 @@ class Ui(QtWidgets.QMainWindow):
         self.PBMono1Enable.clicked.connect(self.enable_mcam_1)
         self.diagnostic_log.setPlainText('Startup Completed.\n')
         self.TBDiagnosticLog.setDocument(self.diagnostic_log)
+        self.PBMono1AutoExposure.clicked.connect(self.trigger_mcam_1_aelock)
         
         self.monocams = MonoCamera()
         self.show()
@@ -82,10 +83,10 @@ class Ui(QtWidgets.QMainWindow):
 
     def trigger_mcam_1_aelock(self):
         if self.monocams.is_streaming:
-            self.monocams.feature_data['name'] = 'AutoExposure'
+            self.monocams.feature_data['name'] = 'ExposureAuto'
             self.monocams.feature_data['set'] = True
             self.monocams.feature_data['value'] = 'Once'
-            self.feature_request = True
+            self.monocams.feature_request = True
 
 
     def mcam1_graphics_worker(self):
