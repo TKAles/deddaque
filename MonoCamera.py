@@ -1,6 +1,8 @@
 from threading import Thread
 import time
 from vimba import Vimba, Camera, AllocationMode, Frame, FrameHandler    
+import numpy as np
+from copy import copy
 
 class MonoCamera():
 
@@ -9,11 +11,11 @@ class MonoCamera():
         self.exposure_value = -1
         self.amplifier_value = -1
         self.camera_model = ''
-        self.current_frame = ''
+        self.current_frame = np.zeros((5,5))
         self.current_timestamp = ''
         self.is_streaming = False
         self.feature_request = False
-        self.feature_data = {'name': '', 'value': ''}
+        self.feature_data = {'name': '', 'set': False, 'value': ''}
         self.buffer_size = 10
         
         pass
@@ -52,5 +54,8 @@ class MonoCamera():
     def stream_callback(self, mcam: Camera, mframe: Frame):
         if self.feature_request:
             pass
-        print('returning frame')
+
+        self.current_frame = copy(mframe.as_numpy_ndarray())
+        self.current_timestamp = copy(mframe.get_timestamp())
+
         mcam.queue_frame(mframe)

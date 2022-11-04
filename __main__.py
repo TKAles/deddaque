@@ -9,6 +9,7 @@ import os
 from MonoCamera import MonoCamera
 from distutils.dep_util import newer
 from PyQt5 import uic
+import pyqtgraph as pg
 
 class Ui(QtWidgets.QMainWindow):
 
@@ -18,7 +19,8 @@ class Ui(QtWidgets.QMainWindow):
     def __init__(self):
         super(Ui, self).__init__()
         uic.loadUi(self.ui_path, self)
-        
+        self.image_worker_timer = QtCore.QTimer()
+        self.image_worker_timer.timeout.connect(self.mcam1_graphics_worker)
         self.TBDiagnosticLog.setReadOnly(True)
         self.diagnostic_log = QtGui.QTextDocument()
 
@@ -42,11 +44,14 @@ class Ui(QtWidgets.QMainWindow):
         ))
         self.PBMono1Enable.setEnabled(True)
         self.LEMono1ExposureTime.setText('{0:.1f}'.format(self.monocams.exposure_value))
-        
         self.LEMono1AmplifierGain.setText('{0:.1f}'.format(self.monocams.amplifier_value))
-        
         self.PBMono1Detect.setText('Redetect')
         self.PBMono1Enable.setText('Stream {0}'.format(self.monocams.camera_id))
+        self.append_log('MONO1: Creating ViewBox and ImageItem for display.')
+        self.mcam1_viewbox = pg.ViewBox()
+        self.mcam1_imageitem = pg.ImageItem()
+        self.GVMono1Preview.setCentralItem(self.mcam1_viewbox)
+        self.mcam1_viewbox.addItem(self.mcam1_imageitem)
         return
 
     def enable_mcam_1(self):
@@ -61,17 +66,34 @@ class Ui(QtWidgets.QMainWindow):
             self.PBMono1SetExposure.setEnabled(True)
             self.PBMono1SetAmplifierGain.setEnabled(True)
             self.PBMono1AutoExposure.setEnabled(True)
+            self.image_worker_timer.start(15)
             
         elif not self.monocams.is_streaming:
             self.PBMono1Enable.setText('Stream {0}'.format(self.monocams.camera_id))
             self.append_log('MONO1: Camera has left stream mode')
+            self.append_log('MONO1: Disabling extra UI controls')
             self.LEMono1ExposureTime.setEnabled(False)
             self.LEMono1AmplifierGain.setEnabled(False)
             self.PBMono1SetExposure.setEnabled(False)
             self.PBMono1SetAmplifierGain.setEnabled(False)
             self.PBMono1AutoExposure.setEnabled(False)
+            self.image_worker_timer.stop()
 
 
+    def trigger_mcam_1_aelock(self):
+        if self.monocams.is_streaming:
+            self.monocams.feature_data['name'] = 'AutoExposure'
+            self.monocams.feature_data['set'] = True
+            self.monocams.feature_data['value'] = 'Once'
+            self.feature_request = True
+
+
+    def mcam1_graphics_worker(self):
+        self.mcam1_imageitem = pg.ImageItem(self.monocams.current_frame)
+        self.mcam1_viewbox.clear()
+        self.mcam1_viewbox.addItem(self.mcam1_imageitem)
+        return
+        
     def append_log(self, string_to_append):
         cursor = QtGui.QTextCursor(self.diagnostic_log)
         cursor.movePosition(11)     ## 11 is enum value for selecting end of document
