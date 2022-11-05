@@ -59,7 +59,6 @@ class MonoCamera():
             self.feature_request = False
             if self.feature_data['set']:
                 mcam.get_feature_by_name(self.feature_data['name']).set(self.feature_data['value'])
-                print('set one-shot autoexposure')
             elif not self.feature_data['set']:
                 self.feature_data['value'] = mcam.get_feature_by_name(self.feature_data['name'])
             pass

@@ -145,6 +145,42 @@
          </spacer>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_18">
+            <property name="text">
+             <string>Timestamp Delta</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="LMono1TimeDelta">
+            <property name="text">
+             <string>N/A</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QLabel" name="label_19">
+            <property name="text">
+             <string>Frames Per Second</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="LMono1FPS">
+            <property name="text">
+             <string>N/A</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
          <layout class="QHBoxLayout" name="HLViewportCenter">
           <item>
            <spacer name="horizontalSpacer">

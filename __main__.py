@@ -2,6 +2,7 @@
     __main__: Main thread for the data acquisition software.
 '''
 
+import time
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
 import sys
 import os
@@ -87,12 +88,15 @@ class Ui(QtWidgets.QMainWindow):
             self.monocams.feature_data['set'] = True
             self.monocams.feature_data['value'] = 'Once'
             self.monocams.feature_request = True
-
+        time.sleep(0.1)
+        self.monocams.feature_data['name'] = 'ExposureTime'
 
     def mcam1_graphics_worker(self):
         self.mcam1_imageitem = pg.ImageItem(self.monocams.current_frame)
         self.mcam1_viewbox.clear()
         self.mcam1_viewbox.addItem(self.mcam1_imageitem)
+        self.LMono1TimeDelta.setText('{0:0.4f}ms'.format(self.monocams.timestamp_delta))
+        self.LMono1FPS.setText('{0:.2f} fps'.format(self.monocams.fps_value))
         return
         
     def append_log(self, string_to_append):
@@ -105,8 +109,16 @@ class Ui(QtWidgets.QMainWindow):
             )
         
         return
+    def cleanup(self):
+        
+        try:
+            self.monocams.is_streaming = False
+            self.monocams.camera_thread.join()
+        except:
+            pass
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     window = Ui()
-    app.exec_()
+    app.aboutToQuit.connect(window.cleanup)
+    app.exec()
