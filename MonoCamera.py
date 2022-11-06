@@ -1,26 +1,26 @@
-from threading import Thread
+import queue
 import time
-from vimba import *    
-import numpy as np
 from copy import copy
+from threading import Thread
+
+import numpy as np
+from vimba import *
+
 
 class MonoCamera():
 
     def __init__(self) -> None:
-        self.camera_id = ''
-        self.exposure_value = -1
-        self.amplifier_value = -1
-        self.camera_model = ''
-        self.current_frame = np.zeros((5,5))
-        self.current_timestamp = 0
-        self.previous_timestamp = 0
-        self.timestamp_delta = 0
-        self.fps_value = 0
+
+        self.camera_id = ''         # String to connect to camera over usb
+        self.exposure_value = -1    # Exposure in microseconds
+        self.amplifier_value = -1   # Amplifier Gain in dB
+        self.camera_model = ''      # Model of camera reported by vimba
         self.is_streaming = False
-        self.feature_request = False
-        self.feature_data = {'name': '', 'set': False, 'value': ''}
         self.buffer_size = 10
-        
+
+        self.frame_queue = queue.Queue()
+        self.timestamp_queue = queue.Queue()
+
         pass
 
     def detect_devices(self):
@@ -65,10 +65,8 @@ class MonoCamera():
                 return cam.get_feature_by_name(feature_name).get()
 
     def stream_callback(self, mcam: Camera, mframe: Frame):
-        self.previous_timestamp = copy(self.current_timestamp)
-        self.current_frame = np.zeros(shape=self.current_frame.shape)
-        self.current_frame = copy(mframe.as_numpy_ndarray())
-        self.current_timestamp = mframe.get_timestamp()
-        self.timestamp_delta = (self.current_timestamp - self.previous_timestamp) / (10**6)
-        self.fps_value = 1000.0 / self.timestamp_delta
+        
+        self.frame_queue.put(mframe.as_numpy_ndarray())
+        self.timestamp_queue.put(mframe.get_timestamp())
+        
         mcam.queue_frame(mframe)
