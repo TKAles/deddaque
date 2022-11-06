@@ -2,11 +2,13 @@
     __main__: Main thread for the data acquisition software.
 '''
 
+from multiprocessing.util import is_abstract_socket_namespace
 import time
+from tkinter import OFF
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
 import sys
 import os
-
+import numpy as np
 from MonoCamera import MonoCamera
 from distutils.dep_util import newer
 from PyQt5 import uic
@@ -30,6 +32,8 @@ class Ui(QtWidgets.QMainWindow):
         self.PBMono1Detect.clicked.connect(self.connect_mcam_1)
         self.PBMono1Enable.clicked.connect(self.enable_mcam_1)
         self.PBMono1AutoExposure.clicked.connect(self.trigger_mcam_1_aelock)
+        self.PBMono1SetExposure.clicked.connect(self.mcam1_set_exposure)
+        self.PBMono1SetAmplifierGain.clicked.connect(self.mcam1_set_amplifier)
         self.monocam_one = MonoCamera()
         self.show()
         self.diagnostic_log.setPlainText('Startup Completed.\n')
@@ -72,6 +76,8 @@ class Ui(QtWidgets.QMainWindow):
         self.GVMono1Preview.setEnabled(True)
         self.monocam_one.toggle_stream()
         if self.monocam_one.is_streaming:
+            # If the camera is in streaming mode after the toggle
+            # update the UI and add to the log
             self.PBMono1Enable.setText('Stop {0}'.format(self.monocam_one.camera_id))
             self.append_log('MONO1: Camera has entered stream mode')
             self.append_log('MONO1: Enabling extra ui')
@@ -79,10 +85,13 @@ class Ui(QtWidgets.QMainWindow):
             self.LEMono1AmplifierGain.setEnabled(True)
             self.PBMono1SetExposure.setEnabled(True)
             self.PBMono1SetAmplifierGain.setEnabled(True)
+            
             self.PBMono1AutoExposure.setEnabled(True)
-            self.image_worker_timer.start(15)
+            self.image_worker_timer.start(16)
             
         elif not self.monocam_one.is_streaming:
+            # If the streaming mode hasn't started, start it.
+
             self.PBMono1Enable.setText('Stream {0}'.format(self.monocam_one.camera_id))
             self.append_log('MONO1: Camera has left stream mode')
             self.append_log('MONO1: Disabling extra UI controls')
@@ -95,20 +104,39 @@ class Ui(QtWidgets.QMainWindow):
 
 
     def trigger_mcam_1_aelock(self):
+        '''
+        trigger_mcam_1_aelock: Commands the connected camera to do 
+                                a single shot AutoExposure. Updates UI with
+                                new ExposureTime in microseconds.
+        '''
         if self.monocam_one.is_streaming:
-            self.monocam_one.feature_data['name'] = 'ExposureAuto'
-            self.monocam_one.feature_data['set'] = True
-            self.monocam_one.feature_data['value'] = 'Once'
-            self.monocam_one.feature_request = True
-        time.sleep(0.1)
-        self.monocam_one.feature_data['name'] = 'ExposureTime'
+            self.monocam_one.set_camera_feature('ExposureAuto', 'Once')
+            time.sleep(0.2)
+            self.LEMono1ExposureTime.setText('{0:.2f}'.format(
+                self.monocam_one.get_camera_feature('ExposureTime')
+            ))
+            self.monocam_one.set_camera_feature('ExposureAuto', 'Off')
 
+    def mcam1_set_exposure(self):
+        if self.monocam_one.is_streaming:
+            self.monocam_one.set_camera_feature('ExposureTime', self.LEMono1ExposureTime.text())
+        return
+
+    def mcam1_set_amplifier(self):
+        if self.monocam_one.is_streaming:
+            self.monocam_one.set_camera_feature('Gain', self.LEMono1AmplifierGain.text())
+        return
+    
     def mcam1_graphics_worker(self):
-        self.mcam1_imageitem = pg.ImageItem(self.monocam_one.current_frame)
-        self.mcam1_viewbox.clear()
-        self.mcam1_viewbox.addItem(self.mcam1_imageitem)
-        self.LMono1TimeDelta.setText('{0:0.4f}ms'.format(self.monocam_one.timestamp_delta))
-        self.LMono1FPS.setText('{0:.2f} fps'.format(self.monocam_one.fps_value))
+        frame_is_all_zeros = not np.any(self.monocam_one.current_frame)
+        if frame_is_all_zeros:
+            pass
+        else:
+            self.mcam1_imageitem = pg.ImageItem(self.monocam_one.current_frame)
+            self.mcam1_viewbox.clear()
+            self.mcam1_viewbox.addItem(self.mcam1_imageitem)
+            self.LMono1TimeDelta.setText('{0:0.4f}ms'.format(self.monocam_one.timestamp_delta))
+            self.LMono1FPS.setText('{0:.2f} fps'.format(self.monocam_one.fps_value))
         return
         
     def append_log(self, string_to_append):

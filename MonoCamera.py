@@ -1,6 +1,6 @@
 from threading import Thread
 import time
-from vimba import Vimba, Camera, AllocationMode, Frame, FrameHandler    
+from vimba import *    
 import numpy as np
 from copy import copy
 
@@ -54,18 +54,21 @@ class MonoCamera():
         self.is_streaming = False
         return
 
-    def stream_callback(self, mcam: Camera, mframe: Frame):
-        if self.feature_request:
-            self.feature_request = False
-            if self.feature_data['set']:
-                mcam.get_feature_by_name(self.feature_data['name']).set(self.feature_data['value'])
-            elif not self.feature_data['set']:
-                self.feature_data['value'] = mcam.get_feature_by_name(self.feature_data['name'])
-            pass
+    def set_camera_feature(self, feature_name, feature_value):
+        with Vimba.get_instance() as vi:
+            with vi.get_camera_by_id(self.camera_id) as cam:
+                cam.get_feature_by_name(feature_name).set(feature_value)
 
+    def get_camera_feature(self, feature_name):
+        with Vimba.get_instance() as vi:
+            with vi.get_camera_by_id(self.camera_id) as cam:
+                return cam.get_feature_by_name(feature_name).get()
+
+    def stream_callback(self, mcam: Camera, mframe: Frame):
         self.previous_timestamp = copy(self.current_timestamp)
+        self.current_frame = np.zeros(shape=self.current_frame.shape)
         self.current_frame = copy(mframe.as_numpy_ndarray())
-        self.current_timestamp = copy(mframe.get_timestamp())
+        self.current_timestamp = mframe.get_timestamp()
         self.timestamp_delta = (self.current_timestamp - self.previous_timestamp) / (10**6)
         self.fps_value = 1000.0 / self.timestamp_delta
         mcam.queue_frame(mframe)
