@@ -64,40 +64,6 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="LExposureSettings">
-          <property name="text">
-           <string>Exposure [microseconds]</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="HLExposureLayout">
-          <item>
-           <widget class="QPushButton" name="PBMono1SetExposure">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Set</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="LEMono1ExposureTime">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>150</width>
-              <height>16777215</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
          <widget class="QLabel" name="LAmplfierSettings">
           <property name="text">
            <string>Amplifier Gain [dB]</string>
@@ -106,16 +72,6 @@
         </item>
         <item>
          <layout class="QHBoxLayout" name="HLAmplifierLayout">
-          <item>
-           <widget class="QPushButton" name="PBMono1SetAmplifierGain">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Set</string>
-            </property>
-           </widget>
-          </item>
           <item>
            <widget class="QLineEdit" name="LEMono1AmplifierGain">
             <property name="enabled">
@@ -126,6 +82,40 @@
               <width>150</width>
               <height>16777215</height>
              </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="PBMono1SetAmplifierGain">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Set</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <item>
+           <widget class="QLabel" name="label_20">
+            <property name="text">
+             <string>Sensor Exposure Time</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="LMono1ExposureTime">
+            <property name="frameShape">
+             <enum>QFrame::NoFrame</enum>
+            </property>
+            <property name="text">
+             <string>000μs</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -143,6 +133,54 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item>
+         <widget class="QSlider" name="HSMono1ExposureTime">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QLabel" name="LMono1MinExposure">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>🐇</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_7">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="LMono1MaxExposure">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>🐢</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">

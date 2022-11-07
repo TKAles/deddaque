@@ -4,10 +4,12 @@
 
 import copy
 import time
-from PyQt5 import QtWidgets, QtCore, QtGui, uic
+from threading import Thread
+
+from PyQt5 import QtWidgets, QtGui, uic
 import sys
 from MonoCamera import MonoCamera
-from PyQt5 import uic
+import queue
 import pyqtgraph as pg
 
 
@@ -26,13 +28,17 @@ class Ui(QtWidgets.QMainWindow):
         self.PBMono1Detect.clicked.connect(self.connect_mcam_1)
         self.PBMono1Enable.clicked.connect(self.enable_mcam_1)
         self.PBMono1AutoExposure.clicked.connect(self.trigger_mcam_1_aelock)
-        self.PBMono1SetExposure.clicked.connect(self.mcam1_set_exposure)
         self.PBMono1SetAmplifierGain.clicked.connect(self.mcam1_set_amplifier)
+        # encoder queue and other junk
+        self.encoder_queue_size = 5000  # num of frames to store before dumping to disk
+        self.encoder_queue_one = queue.Queue(maxsize=self.encoder_queue_size)
+        # First camera object and its viewbox, imageitem & worker thread for display
         self.monocam_one = MonoCamera()
         self.monocam_one_viewbox = pg.ViewBox()
         self.mcam1_imageitem = pg.ImageItem()
-
+        self.mcam1_preview_update_thread = Thread()
         self.show()
+        # Log setup and frame_data dict definition
         self.diagnostic_log.setPlainText('Startup Completed.\n')
         self.TBDiagnosticLog.setDocument(self.diagnostic_log)
         self.frame_data = {'old_ts': 0, 'current_ts': 0, 'delta_ts': 0, 'fps': 0.0}
@@ -56,7 +62,6 @@ class Ui(QtWidgets.QMainWindow):
             ))
             # Enable the stream button and grab the exposure time + amp gain values off the camera
             self.PBMono1Enable.setEnabled(True)
-            self.LEMono1ExposureTime.setText('{0:.1f}'.format(self.monocam_one.exposure_value))
             self.LEMono1AmplifierGain.setText('{0:.1f}'.format(self.monocam_one.amplifier_value))
             self.PBMono1Detect.setText('Redetect')
             self.PBMono1Enable.setText('Stream {0}'.format(self.monocam_one.camera_id))
@@ -86,25 +91,23 @@ class Ui(QtWidgets.QMainWindow):
             self.PBMono1Enable.setText('Stop {0}'.format(self.monocam_one.camera_id))
             self.append_log('MONO1: Camera has entered stream mode')
             self.append_log('MONO1: Enabling extra ui')
-            self.LEMono1ExposureTime.setEnabled(True)
             self.LEMono1AmplifierGain.setEnabled(True)
-            self.PBMono1SetExposure.setEnabled(True)
             self.PBMono1SetAmplifierGain.setEnabled(True)
-
             self.PBMono1AutoExposure.setEnabled(True)
-            self.image_worker_timer.start(16)
+            self.mcam1_preview_update_thread = Thread(
+                    target=self.mcam1_graphics_worker)
+            self.mcam1_preview_update_thread.start()
 
         elif not self.monocam_one.is_streaming:
             # If the streaming mode hasn't started, start it.
-
             self.PBMono1Enable.setText('Stream {0}'.format(self.monocam_one.camera_id))
             self.append_log('MONO1: Camera has left stream mode')
             self.append_log('MONO1: Disabling extra UI controls')
-            self.LEMono1ExposureTime.setEnabled(False)
             self.LEMono1AmplifierGain.setEnabled(False)
-            self.PBMono1SetExposure.setEnabled(False)
             self.PBMono1SetAmplifierGain.setEnabled(False)
             self.PBMono1AutoExposure.setEnabled(False)
+            self.monocam_one.is_streaming = False
+            self.mcam1_preview_update_thread.join(1.0)
 
     def trigger_mcam_1_aelock(self):
         """
@@ -115,19 +118,13 @@ class Ui(QtWidgets.QMainWindow):
         if self.monocam_one.is_streaming:
             self.monocam_one.set_camera_feature('ExposureAuto', 'Once')
             time.sleep(0.2)
-            self.LEMono1ExposureTime.setText('{0:.2f}'.format(
-                self.monocam_one.get_camera_feature('ExposureTime')
-            ))
-            self.monocam_one.set_camera_feature('ExposureAuto', 'Off')
 
-    def mcam1_set_exposure(self):
-        if self.monocam_one.is_streaming:
-            self.monocam_one.set_camera_feature('ExposureTime', self.LEMono1ExposureTime.text())
-        return
+            self.monocam_one.set_camera_feature('ExposureAuto', 'Off')
 
     def mcam1_set_amplifier(self):
         if self.monocam_one.is_streaming:
-            self.monocam_one.set_camera_feature('Gain', self.LEMono1AmplifierGain.text())
+            self.monocam_one.set_camera_feature('Gain',
+                                                self.LEMono1AmplifierGain.text())
         return
 
     def mcam1_graphics_worker(self):
@@ -136,14 +133,32 @@ class Ui(QtWidgets.QMainWindow):
                                CCD preview. Should be started as it's own thread.
         """
         while self.monocam_one.is_streaming:
-            # Blocking call to the frame and timestamp queues on the camera.
-            new_frame = self.monocam_one.frame_queue.get(block=True)
+            while self.monocam_one.frame_queue.empty():
+                time.sleep(0.01)
+            new_frame = self.monocam_one.frame_queue.get_nowait()
             new_metadata = self.monocam_one.timestamp_queue.get(block=True)
-            # Frame is numpy ndarray
+            # Copy into the encoder queue
+            if self.encoder_queue_one.not_full and self.is_recording_to_disk:
+                print('adding frame. Queue size {0}'.format(
+                    self.encoder_queue_one.qsize()
+                ))
+                self.encoder_queue_one.put_nowait(new_frame)
+
+            if self.encoder_queue_one.full() and self.is_recording_to_disk:
+                self.append_log('ENC1: Encoder Queue is Full!! Dumping!')
+                self.encoder_queue_one.queue.clear()
+
+            # Calculate the timestamp information and shuffle the timestamps
+            # along with the FPS
             self.frame_data['old_ts'] = copy.copy(self.frame_data['current_ts'])
             self.frame_data['current_ts'] = new_metadata
-            self.frame_data['delta_ts'] = self.frame_data['current_ts'] - self.frame_data['old_ts']
+            self.frame_data['delta_ts'] = (self.frame_data['current_ts'] - self.frame_data['old_ts']) / 10**6
             self.frame_data['fps'] = 1000.0 / self.frame_data['delta_ts']
+            self.LMono1TimeDelta.setText('{0:.2f}ms'
+                                         .format(self.frame_data['delta_ts']))
+            self.LMono1FPS.setText('{0:.2f}fps'.format(self.frame_data['fps']))
+
+            self.mcam1_imageitem.setImage(new_frame)
 
     def append_log(self, string_to_append):
         """

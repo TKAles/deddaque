@@ -11,17 +11,16 @@ class MonoCamera():
 
     def __init__(self) -> None:
 
-        self.camera_id = ''         # String to connect to camera over usb
-        self.exposure_value = -1    # Exposure in microseconds
-        self.amplifier_value = -1   # Amplifier Gain in dB
-        self.camera_model = ''      # Model of camera reported by vimba
+        self.camera_thread = None
+        self.camera_id = ''  # String to connect to camera over usb
+        self.exposure_value = -1  # Exposure in microseconds
+        self.amplifier_value = -1  # Amplifier Gain in dB
+        self.camera_model = ''  # Model of camera reported by vimba
         self.is_streaming = False
         self.buffer_size = 10
 
         self.frame_queue = queue.Queue()
         self.timestamp_queue = queue.Queue()
-
-        pass
 
     def detect_devices(self):
         with Vimba.get_instance() as vi:
@@ -45,14 +44,17 @@ class MonoCamera():
         with Vimba.get_instance() as vi:
             with vi.get_camera_by_id(self.camera_id) as camera:
                 camera.start_streaming(handler=self.stream_callback,
-                                        buffer_count=10,
-                                        allocation_mode=AllocationMode.AnnounceFrame)
+                                       buffer_count=20,
+                                       allocation_mode=AllocationMode.AnnounceFrame)
                 while self.is_streaming:
                     time.sleep(0.1)
 
     def stream_stop(self):
         self.is_streaming = False
         return
+
+    def get_frame_rate(self):
+        return self.get_camera_feature('AcquisitionFrameRate')
 
     def set_camera_feature(self, feature_name, feature_value):
         with Vimba.get_instance() as vi:
@@ -65,8 +67,8 @@ class MonoCamera():
                 return cam.get_feature_by_name(feature_name).get()
 
     def stream_callback(self, mcam: Camera, mframe: Frame):
-        
-        self.frame_queue.put(mframe.as_numpy_ndarray())
-        self.timestamp_queue.put(mframe.get_timestamp())
-        
+
+        self.frame_queue.put(copy(mframe.as_numpy_ndarray()))
+        self.timestamp_queue.put(copy(mframe.get_timestamp()))
+
         mcam.queue_frame(mframe)
