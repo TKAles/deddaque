@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1441</width>
-    <height>848</height>
+    <height>852</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -64,6 +64,41 @@
          </widget>
         </item>
         <item>
+         <widget class="QLabel" name="LExposureSettings">
+          <property name="text">
+           <string>Exposure [microseconds]</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSlider" name="HSMono1Exposure">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="HLExposureLayout">
+          <item>
+           <widget class="QLabel" name="LMono1MinExposure">
+            <property name="text">
+             <string>MinExposure</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="LMono1MaxExposure">
+            <property name="text">
+             <string>MaxExposure</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QLabel" name="LAmplfierSettings">
           <property name="text">
            <string>Amplifier Gain [dB]</string>
@@ -98,30 +133,6 @@
          </layout>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_5">
-          <item>
-           <widget class="QLabel" name="label_20">
-            <property name="text">
-             <string>Sensor Exposure Time</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="LMono1ExposureTime">
-            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
-            </property>
-            <property name="text">
-             <string>000μs</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -133,90 +144,6 @@
            </size>
           </property>
          </spacer>
-        </item>
-        <item>
-         <widget class="QSlider" name="HSMono1ExposureTime">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_4">
-          <item>
-           <widget class="QLabel" name="LMono1MinExposure">
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>🐇</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="horizontalSpacer_7">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QLabel" name="LMono1MaxExposure">
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>🐢</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QLabel" name="label_18">
-            <property name="text">
-             <string>Timestamp Delta</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="LMono1TimeDelta">
-            <property name="text">
-             <string>N/A</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
-          <item>
-           <widget class="QLabel" name="label_19">
-            <property name="text">
-             <string>Frames Per Second</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="LMono1FPS">
-            <property name="text">
-             <string>N/A</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
         </item>
         <item>
          <layout class="QHBoxLayout" name="HLViewportCenter">
@@ -1030,7 +957,7 @@ ppm</string>
      </widget>
     </item>
     <item>
-     <widget class="QTextEdit" name="TBDiagnosticLog"/>
+     <widget class="QPlainTextEdit" name="TBDiagnosticLog"/>
     </item>
    </layout>
   </widget>

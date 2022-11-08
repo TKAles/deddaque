@@ -7,7 +7,7 @@ import numpy as np
 from vimba import *
 
 
-class MonoCamera():
+class MonoCamera:
 
     def __init__(self) -> None:
 
@@ -61,14 +61,26 @@ class MonoCamera():
             with vi.get_camera_by_id(self.camera_id) as cam:
                 cam.get_feature_by_name(feature_name).set(feature_value)
 
+    def update_exposure(self):
+        with Vimba.get_instance() as vi:
+            with vi.get_camera_by_id(self.camera_id) as cam:
+                self.exposure_value = cam.get_feature_by_name('ExposureTime').get()
+        return
+
     def get_camera_feature(self, feature_name):
         with Vimba.get_instance() as vi:
             with vi.get_camera_by_id(self.camera_id) as cam:
                 return cam.get_feature_by_name(feature_name).get()
 
-    def stream_callback(self, mcam: Camera, mframe: Frame):
+    def get_camera_feature_range(self, feature_name):
+        with Vimba.get_instance() as vi:
+            with vi.get_camera_by_id(self.camera_id) as cam:
+                return cam.get_feature_by_name(feature_name).get_range()
 
+    def stream_callback(self, mcam: Camera, mframe: Frame):
+        # Copy the frame as a numpy array and put it in the
+        # display queue. Do the same with the timestamp info
+        # then return the frame to the stream handler.
         self.frame_queue.put(copy(mframe.as_numpy_ndarray()))
         self.timestamp_queue.put(copy(mframe.get_timestamp()))
-
         mcam.queue_frame(mframe)
