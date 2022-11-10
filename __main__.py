@@ -5,6 +5,8 @@
 import copy
 import time
 from threading import Thread
+
+import vimba
 from PyQt5 import QtWidgets, QtGui, uic
 import sys
 from MonoCamera import MonoCamera
@@ -26,7 +28,8 @@ class Ui(QtWidgets.QMainWindow):
         self.PBMono1Detect.clicked.connect(self.connect_mcam_1)
         self.PBMono1Enable.clicked.connect(self.enable_mcam_1)
         self.PBMono1AutoExposure.clicked.connect(self.trigger_mcam_1_aelock)
-        self.max_exposure: int = 8000    # slider max exposure time in microseconds
+        self.HSMono1Exposure.sliderReleased.connect(self.mcam1_exposure_slider_changed)
+        self.max_exposure: int = 10000   # slider max exposure time in microseconds
         self.min_exposure: float = -1.0  # value from camera for minimum exposure in microseconds
         self.PBMono1SetAmplifierGain.clicked.connect(self.mcam1_set_amplifier)
         # encoder queue and other junk
@@ -44,6 +47,16 @@ class Ui(QtWidgets.QMainWindow):
         self.frame_data = {'old_ts': 0, 'current_ts': 0, 'delta_ts': 0, 'fps': 0.0}
 
         return
+    def mcam1_exposure_slider_changed(self):
+        self.append_log('MONO1: Caught valueChanged event on exposure slider.')
+        self.append_log('MONO1: New Value is {0} microseconds.'.format(self.HSMono1Exposure.value()))
+        try:
+            am_streaming = False
+
+            self.monocam_one.set_camera_feature('ExposureTime', self.HSMono1Exposure.value())
+            self.append_log('MONO1: New ExposureTime sent to camera.')
+        except vimba.VimbaFeatureError:
+            self.append_log('Selected exposure time was outside of camera limits. Ignoring.')
 
     def connect_mcam_1(self) -> None:
         """
@@ -73,6 +86,8 @@ class Ui(QtWidgets.QMainWindow):
             self.HSMono1Exposure.setMinimum(int(self.min_exposure))
             self.HSMono1Exposure.setMaximum(int(self.max_exposure))
             self.HSMono1Exposure.setValue(int(self.monocam_one.exposure_value))
+            self.LMono1MinExposure.setText('{0}'.format(int(self.min_exposure)))
+            self.LMono1MaxExposure.setText('{0}'.format(self.max_exposure))
             self.append_log('MONO1: Creating ViewBox and ImageItem for display.')
             # Create the viewbox and place and imageitem into it so you can display the 
             # camera image. GraphicsView is locked to 25% of native resolution of CCD.
@@ -129,6 +144,10 @@ class Ui(QtWidgets.QMainWindow):
             self.monocam_one.set_camera_feature('ExposureAuto', 'Off')
 
     def mcam1_set_amplifier(self):
+        """
+        mcam1_set_amplifier: sets the onboard camera amplifier value to whatever is in the
+                             amplifier lineedit box.
+        """
         if self.monocam_one.is_streaming:
             self.monocam_one.set_camera_feature('Gain',
                                                 self.LEMono1AmplifierGain.text())
@@ -144,12 +163,6 @@ class Ui(QtWidgets.QMainWindow):
                 time.sleep(0.01)
             new_frame = self.monocam_one.frame_queue.get_nowait()
             new_metadata = self.monocam_one.timestamp_queue.get(block=True)
-            # Copy into the encoder queue if the system is in record mode.
-            if self.encoder_queue_one.not_full and self.is_recording_to_disk:
-                print('adding frame. Queue size {0}'.format(
-                    self.encoder_queue_one.qsize()
-                ))
-                self.encoder_queue_one.put_nowait(new_frame)
             # Calculate the timestamp information and shuffle the timestamps
             # along with the FPS
             self.frame_data['old_ts'] = copy.copy(self.frame_data['current_ts'])
@@ -158,7 +171,7 @@ class Ui(QtWidgets.QMainWindow):
             self.frame_data['fps'] = 1000.0 / self.frame_data['delta_ts']
             self.mcam1_imageitem.setImage(new_frame)
 
-    def append_log(self, string_to_append):
+    def append_log(self, string_to_append: object) -> object:
         """
         append_log(string_to_append): Function that adds to the end of
                                       the QTextDocument that is the session log.
